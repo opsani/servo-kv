@@ -1,0 +1,19 @@
+{
+  "application": {
+    "components": {
+      "canary": {
+        "settings": {
+          "memory": {
+            "value": 3072
+          },
+          "cpu": {
+            "value": 3
+          },
+          "replicas": {
+            "value": 1
+          }
+        }
+      }
+    }
+  }
+}

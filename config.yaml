@@ -1,0 +1,38 @@
+kv:
+  query: ./query.sh
+  adjust: ./adjust.sh
+  application:
+    components:
+      canary:
+        settings:
+          memory:
+            type: range
+            min: 1
+            max: 5
+            step: .1
+            unit: GiB
+          cpu:
+            type: range
+            min: .1
+            max: 4
+            step: .1
+            unit: cores
+          replicas:
+            type: range
+            min: 1
+            max: 10
+            step: 1
+            unit: count
+        env:
+          JAVA_ARGS:
+            encoder:
+              name: jvm
+              before:
+                - "/app.sh"
+              settings:
+                GCTimeRatio:
+                  default: 75
+                  step: 15
+              after:
+                - "-v"
+          N_DB_CONN: 100

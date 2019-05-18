@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""
+Optune key-value adjust driver
+(C) 2019, Opsani. All Rights Reserved.
+See LICENSE file for license terms
+
+Use:
+
+adjust --version
+adjust --info
+adjust --query app_name
+adjust app_name < settings-file.json
+
+This script requires a configuration file placed at a fixed location (see CONFIG_FILE constant below).
+"""
+import select
+import subprocess
+
+import yaml
+from adjust import Adjust
+
+DRIVER_NAME = 'key-value'
+DESC = 'Key-value adjust driver for Opsani Optune'
+VERSION = '0.0.1'
+HAS_CANCEL = False
+
+DEFAULT_QUERY_EXECUTABLE = './query.sh'
+DEFAULT_ADJUST_EXECUTABLE = './adjust.sh'
+CONFIG_FILE = './config.yaml'
+
+
+def q(s):
+    return '"{}"'.format(s)
+
+
+def run_command(cmd, **kwargs):
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, executable='/bin/bash',
+                          **kwargs)
+
+
+class KeyValue(Adjust):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        config = yaml.load(open('config.yaml', 'r'))
+        self.config = config['kv']
+
+    def query_input(self):
+        def func(item):
+            name, comp = item
+            return name, list(comp['settings'].keys())
+        result = dict(map(func, self.config['application']['components'].items()))
+        return yaml.dump(result)
+
+    @staticmethod
+    def adjust_input(data):
+        ret = []
+        for name, comp in data['application']['components'].items():
+            for sname, setting in comp['settings'].items():
+                ret.append('{}.{}: {}'.format(name, sname, setting.get('value')))
+        return '\n'.join(ret) + '\n'
+
+    def query(self):
+        script = self.config.get('query', DEFAULT_QUERY_EXECUTABLE)
+        output = run_command(script, input=bytes(self.query_input(), 'utf-8'))
+        if output.stderr:
+            raise Exception(output.stderr.decode('utf-8'))
+        query_result = yaml.load(output.stdout)
+
+        components = self.config['application']['components']
+        result = {}
+        for name, comp in components.items():
+            csettings = result.setdefault(name, {}).setdefault('settings', {})
+            for sname, setting in comp['settings'].items():
+                csettings[sname] = {**setting, 'value': query_result.get('{}.{}'.format(name, sname), setting.get('default'))}
+        return result
+
+    def adjust(self, data=None):
+        stdin = bytes(self.adjust_input(data), 'utf-8')
+        script = self.config.get('adjust', DEFAULT_ADJUST_EXECUTABLE)
+        proc = subprocess.Popen(script, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stderr = []
+        on_output = [proc.stdout, proc.stderr]
+        on_input = [proc.stdin]
+        on_exception = [proc.stdin, proc.stdout, proc.stderr]
+        stdout_eof = False
+        stderr_eof = False
+        while True:
+            output_descriptors, input_descriptors, _ = select.select(on_output, on_input, on_exception)
+            if stdout_eof and stderr_eof and proc.poll() is not None:  # process exited and no more data
+                break
+            for descriptor in output_descriptors:
+                if descriptor is proc.stderr:
+                    line = descriptor.read(4096).strip().decode('UTF-8')
+                    if not line:
+                        stderr_eof = True
+                        continue
+                    stderr.append(line)
+                if descriptor is proc.stdout:  # h is proc.stdout
+                    line = descriptor.readline()
+                    if not line:
+                        stdout_eof = True
+                        continue
+                    stdout_line = line.strip().decode('UTF-8')
+                    if not stdout_line:
+                        continue  # ignore blank lines (shouldn't be output, though)
+                    try:
+                        stdout = yaml.load(stdout_line)
+                        if 'progress' in stdout:
+                            self.progress = stdout.get('progress')
+                            self.print_progress()
+                    except Exception:
+                        proc.terminate()
+                        raise
+            if input_descriptors:
+                line = min(getattr(select, 'PIPE_BUF', 512), len(stdin))  # write with select.PIPE_BUF bytes or less should not block
+                if not line:  # done sending stdin
+                    proc.stdin.close()
+                    on_input = []
+                    on_exception = [proc.stdout, proc.stderr]
+                else:
+                    proc.stdin.write(stdin[:line])
+                    stdin = stdin[line:]
+        if stderr:
+            stderr.append('Return code: {}'.format(proc.returncode))
+            raise Exception('\n'.join(stderr))
+
+
+if __name__ == '__main__':
+    driver = KeyValue(VERSION, DESC, HAS_CANCEL)
+    driver.run()
