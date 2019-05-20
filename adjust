@@ -24,8 +24,8 @@ DESC = 'Key-value adjust driver for Opsani Optune'
 VERSION = '0.0.1'
 HAS_CANCEL = False
 
-DEFAULT_QUERY_EXECUTABLE = './query.sh'
-DEFAULT_ADJUST_EXECUTABLE = './adjust.sh'
+DEFAULT_QUERY_EXEC_PATH = './query.sh'
+DEFAULT_ADJUST_EXEC_PATH = './adjust.sh'
 CONFIG_FILE = './config.yaml'
 
 
@@ -44,53 +44,56 @@ class KeyValue(Adjust):
         config = yaml.load(open('config.yaml', 'r'))
         self.config = config['kv']
 
-    def query_input(self):
+    @staticmethod
+    def query_input(config):
         def func(item):
-            name, comp = item
-            return name, list(comp['settings'].keys())
-        result = dict(map(func, self.config['application']['components'].items()))
-        return yaml.dump(result)
+            component_name, component = item
+            setting_names = component['settings'].keys()
+            return component_name, setting_names
+        _input = dict(map(func, config['application']['components'].items()))
+        return yaml.dump(_input, default_flow_style=False)
 
     @staticmethod
     def adjust_input(data):
-        ret = []
-        for name, comp in data['application']['components'].items():
-            for sname, setting in comp['settings'].items():
-                ret.append('{}.{}: {}'.format(name, sname, setting.get('value')))
-        return '\n'.join(ret) + '\n'
+        _input = {}
+        for component_name, component in data['application']['components'].items():
+            for setting_name, setting in component['settings'].items():
+                _input['{}.{}'.format(component_name, setting_name)] = setting.get('value')
+        return yaml.dump(_input, default_flow_style=False)
 
     def query(self):
-        script = self.config.get('query', DEFAULT_QUERY_EXECUTABLE)
-        output = run_command(script, input=bytes(self.query_input(), 'utf-8'))
-        if output.stderr:
-            raise Exception(output.stderr.decode('utf-8'))
-        query_result = yaml.load(output.stdout)
-
+        script_path = self.config.get('query', DEFAULT_QUERY_EXEC_PATH)
+        result = run_command(script_path, input=bytes(self.query_input(self.config), 'utf-8'))
+        if result.stderr:
+            raise Exception(result.stderr.decode('utf-8'))
+        output = yaml.load(result.stdout)
         components = self.config['application']['components']
-        result = {}
+        ret = {}
         for name, comp in components.items():
-            csettings = result.setdefault(name, {}).setdefault('settings', {})
-            for sname, setting in comp['settings'].items():
-                csettings[sname] = {**setting, 'value': query_result.get('{}.{}'.format(name, sname), setting.get('default'))}
-        return result
+            component_settings = ret.setdefault(name, {}).setdefault('settings', {})
+            for setting_name, setting in comp['settings'].items():
+                component_settings[setting_name] = {
+                    **setting,
+                    'value': output.get('{}.{}'.format(name, setting_name), setting.get('default')),
+                }
+        return ret
 
     def adjust(self, data=None):
         stdin = bytes(self.adjust_input(data), 'utf-8')
-        script = self.config.get('adjust', DEFAULT_ADJUST_EXECUTABLE)
+        script = self.config.get('adjust', DEFAULT_ADJUST_EXEC_PATH)
         proc = subprocess.Popen(script, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderr = []
         on_output = [proc.stdout, proc.stderr]
         on_input = [proc.stdin]
-        on_exception = [proc.stdin, proc.stdout, proc.stderr]
         stdout_eof = False
         stderr_eof = False
         while True:
-            output_descriptors, input_descriptors, _ = select.select(on_output, on_input, on_exception)
+            output_descriptors, input_descriptors, _ = select.select(on_output, on_input, [])
             if stdout_eof and stderr_eof and proc.poll() is not None:  # process exited and no more data
                 break
             for descriptor in output_descriptors:
                 if descriptor is proc.stderr:
-                    line = descriptor.read(4096).strip().decode('UTF-8')
+                    line = descriptor.read(4096).decode('UTF-8').strip()
                     if not line:
                         stderr_eof = True
                         continue
@@ -100,7 +103,7 @@ class KeyValue(Adjust):
                     if not line:
                         stdout_eof = True
                         continue
-                    stdout_line = line.strip().decode('UTF-8')
+                    stdout_line = line.decode('UTF-8').strip()
                     if not stdout_line:
                         continue  # ignore blank lines (shouldn't be output, though)
                     try:
@@ -112,14 +115,13 @@ class KeyValue(Adjust):
                         proc.terminate()
                         raise
             if input_descriptors:
-                line = min(getattr(select, 'PIPE_BUF', 512), len(stdin))  # write with select.PIPE_BUF bytes or less should not block
-                if not line:  # done sending stdin
+                size = min(getattr(select, 'PIPE_BUF', 512), len(stdin))  # write with select.PIPE_BUF bytes or less should not block
+                if not size:  # done sending stdin
                     proc.stdin.close()
                     on_input = []
-                    on_exception = [proc.stdout, proc.stderr]
                 else:
-                    proc.stdin.write(stdin[:line])
-                    stdin = stdin[line:]
+                    proc.stdin.write(stdin[:size])
+                    stdin = stdin[size:]
         if stderr:
             stderr.append('Return code: {}'.format(proc.returncode))
             raise Exception('\n'.join(stderr))
