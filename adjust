@@ -24,8 +24,10 @@ DESC = 'Key-value adjust driver for Opsani Optune'
 VERSION = '0.0.1'
 HAS_CANCEL = False
 
-DEFAULT_QUERY_EXEC_PATH = './query.sh'
-DEFAULT_ADJUST_EXEC_PATH = './adjust.sh'
+QUERY_EXEC_FIELD = 'query_exec'
+ADJUST_EXEC_FIELD = 'adjust_exec'
+DEFAULT_QUERY_EXEC = './query.sh'
+DEFAULT_ADJUST_EXEC = './adjust.sh'
 CONFIG_FILE = './config.yaml'
 
 
@@ -62,8 +64,8 @@ class KeyValue(Adjust):
         return yaml.dump(_input, default_flow_style=False)
 
     def query(self):
-        script_path = self.config.get('query', DEFAULT_QUERY_EXEC_PATH)
-        result = run_command(script_path, input=bytes(self.query_input(self.config), 'utf-8'))
+        cmd = self.config.get(QUERY_EXEC_FIELD, DEFAULT_QUERY_EXEC)
+        result = run_command(cmd, input=bytes(self.query_input(self.config), 'utf-8'))
         if result.stderr:
             raise Exception(result.stderr.decode('utf-8'))
         output = yaml.load(result.stdout)
@@ -80,8 +82,8 @@ class KeyValue(Adjust):
 
     def adjust(self, data=None):
         stdin = bytes(self.adjust_input(data), 'utf-8')
-        script = self.config.get('adjust', DEFAULT_ADJUST_EXEC_PATH)
-        proc = subprocess.Popen(script, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cmd = self.config.get(ADJUST_EXEC_FIELD, DEFAULT_ADJUST_EXEC)
+        proc = subprocess.Popen(cmd, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderr = []
         on_output = [proc.stdout, proc.stderr]
         on_input = [proc.stdin]

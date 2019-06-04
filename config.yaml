@@ -1,6 +1,6 @@
 kv:
-  query: ./query.sh
-  adjust: ./adjust.sh
+  query_exec: ./example-files/query.sh --abc
+  adjust_exec: ./example-files/adjust.sh
   components:
     canary:
       settings:

@@ -46,6 +46,8 @@ component2.setting2: value
 
 ```yaml
 kv:
+  query_exec: ./query.sh --abc
+  adjust_exec: ./adjust.sh
   components:
     component1:
       settings:
