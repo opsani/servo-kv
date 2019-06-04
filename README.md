@@ -7,11 +7,9 @@ This driver calls two user-provided executables: (a) an executable to query curr
 
 In the adjust executable the user is given a serialized YAML object on `stdin` in the following format:
 ```yaml
-component:
-   settings:
-       memory: 2
-       cpu: 3
-       replicas: 2
+component1.memory: 2
+component1.cpu: 3
+component1.replicas: 2
 ```
 
 Where `component` stands for the name of a target application, and section `settings` is a `key: primitive-value` object that defines a set of settings with their respective requested values.
