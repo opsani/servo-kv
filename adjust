@@ -67,7 +67,7 @@ class KeyValue(Adjust):
         if result.stderr:
             raise Exception(result.stderr.decode('utf-8'))
         output = yaml.load(result.stdout)
-        components = self.config['application']['components']
+        components = self.config['components']
         ret = {}
         for name, comp in components.items():
             component_settings = ret.setdefault(name, {}).setdefault('settings', {})
