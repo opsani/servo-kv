@@ -23,7 +23,7 @@ If there's an error or any other tracing/debugging information that is important
 
 ## Query executable
 
-In the query executable the user is given a serialized YAML object on `stdin` in the following format:
+In the query executable the user is given in `stdin` a serialized YAML list in the following format:
 ```yaml
 - component1.memory
 - component1.cpu
