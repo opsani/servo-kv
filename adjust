@@ -17,6 +17,8 @@ import select
 import subprocess
 
 import yaml
+from yaml import YAMLError
+
 from adjust import Adjust
 
 DRIVER_NAME = 'key-value'
@@ -68,7 +70,11 @@ class KeyValue(Adjust):
         result = run_command(cmd, input=bytes(self.query_input(self.config), 'utf-8'))
         if result.stderr:
             raise Exception(result.stderr.decode('utf-8'))
-        output = yaml.load(result.stdout)
+        try:
+            output = yaml.load(result.stdout)
+        except YAMLError as e:
+            e.context = 'Exception while parsing query executable\'s stdout as YAML:{}'.format('\n' + e.context if e.context else '')
+            raise e
         components = self.config['components']
         ret = {}
         for name, comp in components.items():
@@ -109,7 +115,12 @@ class KeyValue(Adjust):
                     if not stdout_line:
                         continue  # ignore blank lines (shouldn't be output, though)
                     try:
-                        stdout = yaml.load(stdout_line)
+                        try:
+                            stdout = yaml.load(stdout_line)
+                        except YAMLError as e:
+                            e.context = 'Exception while parsing adjust executable\'s line from stdout:{}'.format(
+                                '\n' + e.context if e.context else '')
+                            raise e
                         if isinstance(stdout, (int, float)):
                             self.progress = stdout
                             self.print_progress()
