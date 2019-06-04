@@ -1,75 +1,73 @@
-# Key-Value Adjust Driver
+# Optune Key-Value Adjust Driver
 ## Overview
 
-This driver represents our effort to give access to the developers to implement the process of querying and adjusting settings in their target application without writing a fully-fledged adjust driver on Python (which is our main approach).
+This driver calls two user-provided executables: (a) an executable to query current settings of a target application, and (b) an executable to adjust settings of a target application.
 
-The main idea of this driver is to give the developer an ability to implement two separate executables representing `querying` and `adjusting` processes.
-Querying process means extracting current values of target settings from the application that is being optimized.
-Adjusting process means applying given settings and their respective values to the application along with optional reporting of the progress.
+## Adjust executable
 
-You have two write two executables that must contain shebang line:
-`adjust` and `query`. These are the names of the files we are going to execute at two different stages. In the section below you can find the expected stdin and stdout on each of those stages. They meant to be self-explanatory.
-
-A set of components and their respective settings you want to optimize would have to be defined as the configuration file which we expect to be located in the current working directory with name `config.yaml`.
-
-### Query stage
-#### stdin
-Your query executable would be given input in the form of a YAML structure. It would be an object where the root level keys represent `components` that reflect target applications (ex. canary-pg, canary-solr). Each `component` would be an array containing names of settings we would like to query for the current value.
-#### stdout
-Your query executable expected to retrieve current setting values in the form of a YAML structure where the key represents a setting name prefixed with a component name it is coming from joined with the dot (component.setting: value). And the value represents whatever you find current for the setting you would be querying.
-
-### Adjust stage
-#### stdin
-At the adjust stage your executable would be given input in the form of a YAML structure. It would be an object where the root level keys represent `components`, which reflect target applications. Each `component` would be an object representing a set of settings to be adjusted. Each key in that object represents a setting name. And the value of each of those keys represents that particular setting value we would like to set.
-
-Example:
+In the adjust executable the user is given a serialized YAML object on `stdin` in the following format:
 ```yaml
-database:
+component:
    settings:
        memory: 2
        cpu: 3
        replicas: 2
 ```
 
-#### stdout
-(optional) You can report the progress of the adjustment process. You can do so by sending a line to stdout and flushing it immediately. We expect each line we read from stdout to represent a YAML object which has at least the key `progress` with the value being an integer. We use this value to reflect the progress of the adjustment process in Optune's web interface.
+Where `component` stands for the name of a target application, and section `settings` is a `key: primitive-value` object that defines a set of settings with their respective requested values.
 
-Example:
+The user has to adjust the application's settings to the values given on `stdin`.
+
+If the adjustment process takes more than 30 seconds, you can report the progress of the adjustment process by writing to `stdout` a number ranging from 1 to 100, that represents percentage of completeness of the process.
+
+If there's an error or any other tracing/debugging information that is important, you can write it to `stderr`. All the contents of `stderr` will be retained and then either truncated according to the truncation settings of the driver and or kept in a full form and sent to our backend server. Make sure to sanitize the output from sensitive information.
+
+
+## Query executable
+
+In the query executable the user is given a serialized YAML object on `stdin` in the following format:
 ```yaml
-progress: 1  # can go from 0 all the way to 100
+components:
+    component1:
+        - memory
+        - cpu
+        - replicas
+    component2:
+        - setting1
+        - setting2
 ```
 
-#### stderr
-Whenever there's an error you want to report or some other valuable information, such as a trace, debug info or an exception stack trace, you can dump all the contents into stderr. We will send that information to our backend server for debugging purposes. 
+The user has to query respective applications to get the requested settings' current values.
 
-## Sample `config.yaml` along with notes
+When all the requested settings' values have been acquired – they have to be written to `stdout` in the following form:
+```yaml
+component1.setting1: value
+component2.setting2: value
+```
+
+## Sample `config.yaml`
+
 ```yaml
 kv:
-  query: query  # path to the executable
-  adjust: adjust  # path to the executable
-  application:
-    components:
-        comp1:
-          settings:
-            memory:
-              # Currently, we support two types of settings: range and enum.
-              # In the case of enum, we would traverse all the possible values. Type enum does not support properties min, max and step.
-              type: range
-              # Min, max and step represent the boundaries of the setting. We are not going to go beyond those. Property step represents an increment of change. Note that the step value must be able to divide the difference between min and max values without a remainder.
-              min: 1
-              max: 5
-              step: .1
-              unit: GiB
-            cpu:
-              type: range
-              min: .1
-              max: 4
-              step: .1
-              unit: cores
-            replicas:
-              type: range
-              min: 1
-              max: 10
-              step: 1
-              unit: count
+  components:
+    component1:
+      settings:
+        memory:
+          type: range
+          min: 1
+          max: 5
+          step: .1
+          unit: GiB
+        cpu:
+          type: range
+          min: .1
+          max: 4
+          step: .1
+          unit: Cores
+        replicas:
+          type: range
+          min: 1
+          max: 10
+          step: 1
+          unit: Count
 ```
