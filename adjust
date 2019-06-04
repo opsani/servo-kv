@@ -108,8 +108,8 @@ class KeyValue(Adjust):
                         continue  # ignore blank lines (shouldn't be output, though)
                     try:
                         stdout = yaml.load(stdout_line)
-                        if 'progress' in stdout:
-                            self.progress = stdout.get('progress')
+                        if isinstance(stdout, (int, float)):
+                            self.progress = stdout
                             self.print_progress()
                     except Exception:
                         proc.terminate()
