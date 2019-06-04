@@ -46,11 +46,11 @@ class KeyValue(Adjust):
 
     @staticmethod
     def query_input(config):
-        def func(item):
-            component_name, component = item
-            setting_names = component['settings'].keys()
-            return component_name, setting_names
-        _input = dict(map(func, config['application']['components'].items()))
+        _input = []
+        for component_name, component in config['components'].items():
+            settings = component['settings']
+            for setting_name in settings.keys():
+                _input.append('{}.{}'.format(component_name, setting_name))
         return yaml.dump(_input, default_flow_style=False)
 
     @staticmethod

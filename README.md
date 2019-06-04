@@ -25,15 +25,14 @@ If there's an error or any other tracing/debugging information that is important
 
 In the query executable the user is given a serialized YAML object on `stdin` in the following format:
 ```yaml
-components:
-    component1:
-        - memory
-        - cpu
-        - replicas
-    component2:
-        - setting1
-        - setting2
+- component1.memory
+- component1.cpu
+- component1.replicas
+- component2.setting1
+- component2.setting2
 ```
+
+Where the first part (before the dot) signifies the name of the application and the part after the dot indicates the setting name.
 
 The user has to query respective applications to get the requested settings' current values.
 
