@@ -1,6 +1,6 @@
 kv:
-  query_exec: ./example-files/query.sh --abc
-  adjust_exec: ./example-files/adjust.sh
+  query_cmd: ./example-files/query.sh --abc
+  adjust_cmd: ./example-files/adjust.sh
   components:
     canary:
       settings:
@@ -22,6 +22,12 @@ kv:
           max: 10
           step: 1
           unit: count
+        load_balancer:
+          type: enum
+          values:
+            - least_connections
+            - round_robin
+          unit: LB Type
       env:
         JAVA_ARGS:
           encoder:

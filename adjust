@@ -25,11 +25,12 @@ DRIVER_NAME = 'key-value'
 DESC = 'Key-value adjust driver for Opsani Optune'
 VERSION = '0.0.1'
 HAS_CANCEL = False
+PROGRESS_INTERVAL = 30
 
-QUERY_EXEC_FIELD = 'query_exec'
-ADJUST_EXEC_FIELD = 'adjust_exec'
-DEFAULT_QUERY_EXEC = './query.sh'
-DEFAULT_ADJUST_EXEC = './adjust.sh'
+QUERY_CONFIG_FIELD = 'query_cmd'
+ADJUST_CONFIG_FIELD = 'adjust_cmd'
+QUERY_FIELD_DEFAULT = './query.sh'
+ADJUST_FIELD_DEFAULT = './adjust.sh'
 CONFIG_FILE = './config.yaml'
 
 
@@ -49,25 +50,16 @@ class KeyValue(Adjust):
         self.config = config['kv']
 
     @staticmethod
-    def query_input(config):
-        _input = []
-        for component_name, component in config['components'].items():
-            settings = component['settings']
-            for setting_name in settings.keys():
-                _input.append('{}.{}'.format(component_name, setting_name))
-        return yaml.dump(_input, default_flow_style=False)
-
-    @staticmethod
-    def adjust_input(data):
-        _input = {}
+    def adjust_stdin(data):
+        stdin = {}
         for component_name, component in data['application']['components'].items():
             for setting_name, setting in component['settings'].items():
-                _input['{}.{}'.format(component_name, setting_name)] = setting.get('value')
-        return yaml.dump(_input, default_flow_style=False)
+                stdin['{}.{}'.format(component_name, setting_name)] = setting.get('value')
+        return yaml.dump(stdin, default_flow_style=False)
 
     def query(self):
-        cmd = self.config.get(QUERY_EXEC_FIELD, DEFAULT_QUERY_EXEC)
-        result = run_command(cmd, input=bytes(self.query_input(self.config), 'utf-8'))
+        cmd = self.config.get(QUERY_CONFIG_FIELD, QUERY_FIELD_DEFAULT)
+        result = run_command(cmd)
         if result.stderr:
             raise Exception(result.stderr.decode('utf-8'))
         try:
@@ -87,8 +79,8 @@ class KeyValue(Adjust):
         return ret
 
     def adjust(self, data=None):
-        stdin = bytes(self.adjust_input(data), 'utf-8')
-        cmd = self.config.get(ADJUST_EXEC_FIELD, DEFAULT_ADJUST_EXEC)
+        stdin = bytes(self.adjust_stdin(data), 'utf-8')
+        cmd = self.config.get(ADJUST_CONFIG_FIELD, ADJUST_FIELD_DEFAULT)
         proc = subprocess.Popen(cmd, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderr = []
         on_output = [proc.stdout, proc.stderr]
@@ -123,7 +115,6 @@ class KeyValue(Adjust):
                             raise e
                         if isinstance(stdout, (int, float)):
                             self.progress = stdout
-                            self.print_progress()
                     except Exception:
                         proc.terminate()
                         raise
@@ -141,5 +132,5 @@ class KeyValue(Adjust):
 
 
 if __name__ == '__main__':
-    driver = KeyValue(VERSION, DESC, HAS_CANCEL)
+    driver = KeyValue(VERSION, DESC, HAS_CANCEL, PROGRESS_INTERVAL)
     driver.run()

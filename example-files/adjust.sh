@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-echo "progress: 1"
+echo "1"
 sleep 1
-echo "progress: 25"
+echo "25"
 sleep 1
-echo "progress: 50"
+echo "50"
 sleep 1
-echo "progress: 75"
+echo "75"
 sleep 1
-echo "progress: 99"
+echo "99"
 sleep 1

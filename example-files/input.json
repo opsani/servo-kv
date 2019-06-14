@@ -4,13 +4,16 @@
       "canary": {
         "settings": {
           "memory": {
-            "value": 3072
+            "value": 3.5
           },
           "cpu": {
-            "value": 3
+            "value": 2.5
           },
           "replicas": {
             "value": 1
+          },
+          "load_balancer": {
+            "value": "least_connections"
           }
         }
       }

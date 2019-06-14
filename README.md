@@ -23,18 +23,7 @@ If there's an error or any other tracing/debugging information that is important
 
 ## Query executable
 
-In the query executable the user is given in `stdin` a serialized YAML list in the following format:
-```yaml
-- component1.memory
-- component1.cpu
-- component1.replicas
-- component2.setting1
-- component2.setting2
-```
-
-Where the first part (before the dot) signifies the name of the application and the part after the dot indicates the setting name.
-
-The user has to query respective applications to get the requested settings' current values.
+In the query executable the user is expected to request current values of the settings of applications that are specified in the config yaml.
 
 When all the requested settings' values have been acquired – they have to be written to `stdout` in the following form:
 ```yaml
@@ -42,7 +31,7 @@ component1.setting1: value
 component2.setting2: value
 ```
 
-## Sample `config.yaml`
+## Sample configuration section for `config.yaml`
 
 ```yaml
 kv:
