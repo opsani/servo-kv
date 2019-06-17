@@ -76,4 +76,4 @@ The input reflects the same format that is expected on the output of `query` exe
 
 In case the adjustment is not immediate and takes some time to complete, you can report the progress by writing to `stdout` a line with a whole number ranging from 1 to 100, which represents the percentage. It is important to flush the output on every progress report.
 
-If you stumbled upon an exception or any other important tracing/debugging information, you can report its sanitized version to the backend by writing it to `stderr`. All or part of the contents of `stderr` will be sent to the backend for debugging purposes.
+If you stumbled upon an exception or any other important tracing/debugging information, you can report its sanitized version to the backend by writing it to `stderr`. All or part of the contents of `stderr` will be sent to the backend for debugging purposes. You can provide an environment variable that will define in what form the log is going to be discharged to the backend For that please refer to https://github.com/opsani/servo#environment-variables.
