@@ -76,9 +76,15 @@ class KeyValue(Adjust):
         for name, comp in components.items():
             component_settings = ret.setdefault(name, {}).setdefault('settings', {})
             for setting_name, setting in comp['settings'].items():
+                try:
+                    default_value = setting['default']
+                except KeyError:
+                    raise KeyError('No default value has been provided to the setting {} '
+                                   'and no value has been received from command {}. '
+                                   'Cannot proceed.'.format(q(setting_name), q(cmd)))
                 component_settings[setting_name] = {
                     **setting,
-                    'value': output.get('{}.{}'.format(name, setting_name), setting.get('default')),
+                    'value': output.get('{}.{}'.format(name, setting_name), default_value),
                 }
 
         return ret
