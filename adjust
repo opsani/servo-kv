@@ -52,9 +52,11 @@ class KeyValue(Adjust):
     @staticmethod
     def adjust_stdin(data):
         stdin = {}
+
         for component_name, component in data['application']['components'].items():
             for setting_name, setting in component['settings'].items():
                 stdin['{}.{}'.format(component_name, setting_name)] = setting.get('value')
+
         return yaml.dump(stdin, default_flow_style=False)
 
     def query(self):
@@ -62,13 +64,15 @@ class KeyValue(Adjust):
         result = run_command(cmd)
         if result.stderr:
             raise Exception(result.stderr.decode('utf-8'))
+
         try:
             output = yaml.load(result.stdout)
         except YAMLError as e:
             e.context = 'Exception while parsing query executable\'s stdout as YAML:{}'.format('\n' + e.context if e.context else '')
             raise e
-        components = self.config['components']
+
         ret = {}
+        components = self.config['components']
         for name, comp in components.items():
             component_settings = ret.setdefault(name, {}).setdefault('settings', {})
             for setting_name, setting in comp['settings'].items():
@@ -76,6 +80,7 @@ class KeyValue(Adjust):
                     **setting,
                     'value': output.get('{}.{}'.format(name, setting_name), setting.get('default')),
                 }
+
         return ret
 
     def adjust(self, data=None):
@@ -87,23 +92,29 @@ class KeyValue(Adjust):
         on_input = [proc.stdin]
         stdout_eof = False
         stderr_eof = False
+
         while True:
             output_descriptors, input_descriptors, _ = select.select(on_output, on_input, [])
+
             if stdout_eof and stderr_eof and proc.poll() is not None:  # process exited and no more data
                 break
+
             for descriptor in output_descriptors:
                 if descriptor is proc.stderr:
-                    line = descriptor.read(4096).decode('UTF-8').strip()
+                    line = descriptor.read(4096).decode('UTF-8')
                     if not line:
                         stderr_eof = True
                         continue
-                    stderr.append(line)
+                    stderr.append(line.strip())
+
                 if descriptor is proc.stdout:  # h is proc.stdout
                     line = descriptor.readline()
+
                     if not line:
                         stdout_eof = True
                         continue
                     stdout_line = line.decode('UTF-8').strip()
+
                     if not stdout_line:
                         continue  # ignore blank lines (shouldn't be output, though)
                     try:
@@ -113,11 +124,13 @@ class KeyValue(Adjust):
                             e.context = 'Exception while parsing adjust executable\'s line from stdout:{}'.format(
                                 '\n' + e.context if e.context else '')
                             raise e
+
                         if isinstance(stdout, (int, float)):
                             self.progress = stdout
                     except Exception:
                         proc.terminate()
                         raise
+
             if input_descriptors:
                 size = min(getattr(select, 'PIPE_BUF', 512), len(stdin))  # write with select.PIPE_BUF bytes or less should not block
                 if not size:  # done sending stdin
@@ -126,6 +139,7 @@ class KeyValue(Adjust):
                 else:
                     proc.stdin.write(stdin[:size])
                     stdin = stdin[size:]
+
         if stderr:
             stderr.append('Return code: {}'.format(proc.returncode))
             raise Exception('\n'.join(stderr))
