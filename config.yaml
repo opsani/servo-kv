@@ -21,7 +21,6 @@ kv:
           min: 1
           max: 10
           step: 1
-          unit: count
         load_balancer:
           type: enum
           values:
