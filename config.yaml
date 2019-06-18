@@ -27,17 +27,3 @@ kv:
           values:
             - least_connections
             - round_robin
-          unit: LB Type
-      env:
-        JAVA_ARGS:
-          encoder:
-            name: jvm
-            before:
-              - "/app.sh"
-            settings:
-              GCTimeRatio:
-                default: 75
-                step: 15
-            after:
-              - "-v"
-        N_DB_CONN: 100
