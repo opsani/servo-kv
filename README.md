@@ -83,4 +83,4 @@ In case the adjustment is not immediate and takes some time to complete, you can
 
 ### Error reporting
 
-If you stumbled upon an exception or any other important tracing/debugging information, you can report its sanitized version to the backend by writing it to `stderr`. All or part of the contents of `stderr` will be sent to the backend for debugging purposes. You can provide an environment variable that will define in what form the log is going to be discharged to the backend. For that, please, refer to https://github.com/opsani/servo#environment-variables.
+If you stumbled upon an exception or any other important tracing/debugging information, you can report its sanitized version to the backend by writing it to `stderr`. All or part of the contents of `stderr` will be sent to the backend for debugging purposes. You can provide an environment variable that will define in what form the log is going to be discharged to the backend. For that, please, refer to environment variable `OPTUNE_VERBOSE_STDERR` described at https://github.com/opsani/servo#environment-variables.
