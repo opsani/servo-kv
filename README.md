@@ -75,9 +75,9 @@ opsani-canary.cpu: 1.8
 opsani-canary.replicas: 1
 ```
 
-### Progress reporting
-
 The input reflects the same format that is expected on the output of a `query` executable which you can refer to in the section [`Query executable`](#query-executable) above.
+
+### Progress reporting
 
 In case the adjustment is not immediate and takes some time to complete, you can report the progress by writing to `stdout` a line with a whole number ranging from 1 to 100, which represents percentage. It is important to flush the output on every progress report.
 
