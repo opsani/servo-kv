@@ -15,8 +15,8 @@ This driver expects the user to provide a configuration file named `config.yaml`
 ### Example `config.yaml`
 ```yaml
 kv:
-  query_exec: sh query.sh --abc
-  adjust_exec: sh adjust.sh
+  query_cmd: sh query.sh --abc
+  adjust_cmd: sh adjust.sh
   components:
     canary:
       settings:
@@ -41,8 +41,8 @@ kv:
 ```
 
 In detail:
-* `query_exec` is the shell command that is going to be called on the query request from the backend. It is executed under the same user as the `adjust` executable itself.
-* `adjust_exec` is the shell command that is going to be called on the adjust request from the backend. It is executed under the same user as the `adjust` executable itself.
+* `query_cmd` is the shell command that is going to be called on the query request from the backend. It is executed under the same user as the `adjust` executable itself.
+* `adjust_cmd` is the shell command that is going to be called on the adjust request from the backend. It is executed under the same user as the `adjust` executable itself.
 * `components` defines a set of target components that are going to be optimized. Component is an abstract word that implies any type of entity, such as deployment, application, ingress controller or anything else. Usually it is a deployment or an application. Note, that it is certain we will have components that would only report their current settings, and not adjust them in any way. Those components would only participate in the calculation of the score of improvement. Usually, those would represent `production` setup.
 * `settings` defines a set of target component settings that are going to be optimized. Properties `min`, `max` and `step` correspond to the boundaries of allowed change. Property `step` defines the size of a setting value increment and its value should allow us to go from value of `min` all the way to the value of `max` in the whole steps, i.e. without fractioning.
 
