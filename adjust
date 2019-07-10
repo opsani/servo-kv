@@ -83,6 +83,10 @@ class KeyValue(Adjust):
                                    'and no default value has been provided in the configuration file. '
                                    'Cannot proceed.'.format(q(cmd), q(setting_name)))
                 component_settings[setting_name] = {**setting, 'value': value}
+                try:
+                    del component_settings[setting_name]['default']
+                except KeyError:
+                    pass
 
         return {'application': {'components': ret}}
 
