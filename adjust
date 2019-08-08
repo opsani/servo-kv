@@ -63,7 +63,7 @@ class KeyValue(Adjust):
     def query(self):
         cmd = self.config.get(QUERY_CONFIG_FIELD, QUERY_FIELD_DEFAULT)
         result = run_command(cmd)
-        if result.stderr:
+        if result.returncode:
             raise Exception(result.stderr.decode('utf-8'))
 
         try:
