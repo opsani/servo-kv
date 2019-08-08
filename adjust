@@ -150,7 +150,7 @@ class KeyValue(Adjust):
 
             time.sleep(1/60)
 
-        if stderr:
+        if proc.returncode:
             stderr.append('Return code: {}'.format(proc.returncode))
             raise Exception('\n'.join(stderr))
 
