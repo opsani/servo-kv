@@ -40,14 +40,14 @@ def q(s):
 
 
 def run_command(cmd, **kwargs):
-    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, executable='/bin/bash',
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, executable='/bin/bash',
                           **kwargs)
 
 
 class KeyValue(Adjust):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        config = yaml.load(open('config.yaml', 'r'))
+        config = yaml.safe_load(open('config.yaml', 'r'))
         self.config = config['kv']
 
     @staticmethod
@@ -61,13 +61,13 @@ class KeyValue(Adjust):
         return yaml.dump(stdin, default_flow_style=False)
 
     def query(self):
-        cmd = self.config.get(QUERY_CONFIG_FIELD, QUERY_FIELD_DEFAULT)
+        cmd = self.config.get(QUERY_CONFIG_FIELD, QUERY_FIELD_DEFAULT).split(' ')
         result = run_command(cmd)
         if result.returncode:
             raise Exception(result.stderr.decode('utf-8'))
 
         try:
-            output = yaml.load(result.stdout)
+            output = yaml.safe_load(result.stdout)
         except YAMLError as e:
             e.context = 'Exception while parsing query executable\'s stdout as YAML:{}'.format('\n' + e.context if e.context else '')
             raise e
@@ -127,7 +127,7 @@ class KeyValue(Adjust):
                         continue  # ignore blank lines (shouldn't be output, though)
                     try:
                         try:
-                            stdout = yaml.load(stdout_line)
+                            stdout = yaml.safe_load(stdout_line)
                         except YAMLError as e:
                             e.context = 'Exception while parsing adjust executable\'s line from stdout:{}'.format(
                                 '\n' + e.context if e.context else '')
